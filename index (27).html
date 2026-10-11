@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>elio photobooth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,400;1,9..144,600&family=Montserrat:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: шыны панельдер күзгі жылы градиент фон үстінде қалқып тұрады; камера сол жақта, баптаулар оң жақта */
+:root{
+  --bg:#efe2d0; --ink:#2f2119; --muted:#7a6250; --rust:#b4552c; --sun:#e2a628; --olive:#6d6b3b;
+  --glass:rgba(255,250,244,.42); --glass-strong:rgba(255,250,244,.62); --glass-line:rgba(255,255,255,.65);
+  --glass-shadow:0 10px 40px -12px rgba(90,50,20,.28); --sel:rgba(255,255,255,.85);
+  --b1:#e9a35a; --b2:#c8623a; --b3:#f2cf7a; --b4:#8c8a52; --b5:#f6e6cf;
+  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --body:"Montserrat", "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1b120d; --ink:#f4e8da; --muted:#c3a993; --rust:#e07a45; --sun:#efb94a; --olive:#a9a66a;
+  --glass:rgba(40,26,18,.42); --glass-strong:rgba(48,32,22,.62); --glass-line:rgba(255,230,200,.16);
+  --glass-shadow:0 10px 40px -12px rgba(0,0,0,.6); --sel:rgba(255,236,214,.16);
+  --b1:#8a3f1c; --b2:#5e2412; --b3:#9a6a1c; --b4:#3f3d1f; --b5:#2a1a10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1b120d; --ink:#f4e8da; --muted:#c3a993; --rust:#e07a45; --sun:#efb94a; --olive:#a9a66a;
+  --glass:rgba(40,26,18,.42); --glass-strong:rgba(48,32,22,.62); --glass-line:rgba(255,230,200,.16);
+  --glass-shadow:0 10px 40px -12px rgba(0,0,0,.6); --sel:rgba(255,236,214,.16);
+  --b1:#8a3f1c; --b2:#5e2412; --b3:#9a6a1c; --b4:#3f3d1f; --b5:#2a1a10; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:13.5px/1.55 var(--body);min-height:100vh;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+
+/* фон: жылы түсті жұмсақ дақтар + түйіршік */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,var(--b5),var(--bg))}
+.bg.photo{background:var(--bg-photo) center/cover no-repeat}
+.bg.photo .blob{opacity:.35}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.75;transform:translateZ(0)}
+.b1{width:46vw;height:46vw;left:-10vw;top:-12vw;background:var(--b1)}
+.b2{width:40vw;height:40vw;right:-8vw;top:18vh;background:var(--b2);animation-duration:32s}
+.b3{width:34vw;height:34vw;left:30vw;bottom:-14vw;background:var(--b3);animation-duration:22s}
+.b4{width:26vw;height:26vw;left:8vw;bottom:10vh;background:var(--b4);opacity:.5;animation-duration:36s}
+.grain{position:absolute;inset:0;opacity:.08;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+#leaves{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+
+/* шыны */
+.glass{background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);position:relative;transform:translateZ(0)}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.35),rgba(255,255,255,0) 38%)}
+
+.wrap{position:relative;z-index:2;max-width:1060px;margin:0 auto;padding:16px 16px 24px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 10px 8px 12px;border-radius:99px;margin-bottom:22px}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;position:relative}
+.logo svg{width:30px;height:30px}
+.brand{font:italic 600 22px/1 var(--display);letter-spacing:-.01em}
+.brand small{font:600 9px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-style:normal;margin-left:8px;vertical-align:middle}
+.status{margin-left:auto;font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;background:var(--sel);display:flex;align-items:center;gap:7px;position:relative}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.status.live i{background:#5f9a4a;box-shadow:0 0 0 3px rgba(95,154,74,.25)}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:20px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.intro{margin-bottom:14px}
+h1{font:400 clamp(22px,2.6vw,30px)/1.15 var(--display);margin:0 0 4px;text-wrap:balance;letter-spacing:-.015em}
+h1 em{font-style:italic;color:var(--rust)}
+.lede{margin:0;color:var(--muted);max-width:60ch;font-size:13px}
+
+.frame{padding:8px;border-radius:26px}
+.stage{position:relative;border-radius:19px;overflow:hidden;background:#1a110c;aspect-ratio:4/3;max-width:100%}
+.frame[data-tpl="grid"]{max-width:440px;margin-inline:auto}
+.frame[data-tpl="polaroid"]{max-width:520px;margin-inline:auto}
+.frame[data-tpl="grid"] .stage{aspect-ratio:4/5}
+.frame[data-tpl="polaroid"] .stage{aspect-ratio:1/1}
+.cams{position:absolute;inset:0;display:grid;grid-template-columns:1fr}
+.cams.duo{grid-template-columns:1fr 1fr;gap:3px;background:#f7efe3}
+.cam{position:relative;overflow:hidden;background:#20160f}
+.cam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+.cam .tag{position:absolute;left:10px;bottom:10px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:4px 9px;border-radius:99px;border:1px solid rgba(255,255,255,.3)}
+.wait{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#d9c7b3;padding:16px;font-size:12px}
+.f-bw video{filter:grayscale(1) contrast(1.08)}
+.f-sepia video{filter:sepia(.75) saturate(1.1) contrast(1.02) brightness(1.02)}
+.placeholder{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#efe2d2;padding:20px;
+  background:radial-gradient(80% 70% at 30% 20%,rgba(226,166,40,.28),transparent 60%),radial-gradient(70% 60% at 80% 90%,rgba(180,85,44,.35),transparent 60%),#1f140e}
+.placeholder svg{width:38px;height:38px}
+.placeholder p{max-width:32ch;margin:8px auto 14px;color:#cdb9a3;font-size:12.5px}
+#count{position:absolute;inset:0;display:grid;place-items:center;font:italic 600 clamp(70px,13vw,130px)/1 var(--display);color:#fff;text-shadow:0 6px 30px rgba(0,0,0,.4);pointer-events:none}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s}
+#flash.on{opacity:.9;transition:none}
+.dots{position:absolute;top:12px;right:12px;display:flex;gap:5px;padding:5px 7px;border-radius:99px;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.dots b{width:7px;height:7px;border-radius:50%;border:1.5px solid #fff;opacity:.9}
+.dots b.done{background:var(--sun);border-color:var(--sun)}
+#refPip{position:absolute;left:12px;top:12px;max-width:min(40%,190px);color:#fff;border-radius:14px;padding:8px 10px;background:rgba(30,20,14,.32);border:1px solid rgba(255,255,255,.28);-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
+#refPip img{display:block;width:100%;border-radius:8px}
+#refPip strong{display:block;font:italic 600 15px/1.2 var(--display)}
+#refPip span{font-size:11px;opacity:.85}
+#refPip .lbl{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--sun);margin-bottom:3px}
+
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.btn{font:600 12.5px var(--body);border-radius:99px;padding:9px 16px;cursor:pointer;color:var(--ink);background:var(--glass-strong);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.5);transition:transform .15s, box-shadow .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn:focus-visible,.chip:focus-visible,.tpl:focus-visible,.idea:focus-visible,input:focus-visible,.link:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+.btn.main{color:#fff;border-color:rgba(255,255,255,.35);padding:11px 22px;font-size:13px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rust) 82%,#fff),var(--rust));box-shadow:0 8px 22px -10px var(--rust), inset 0 1px 0 rgba(255,255,255,.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.hint{font-size:12px;color:var(--muted)}
+.result{margin-top:20px;display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:20px;align-items:start;border-radius:24px;padding:16px}
+@media (max-width:640px){.result{grid-template-columns:1fr}}
+.result canvas{display:block;max-width:100%;max-height:460px;width:auto;height:auto;border-radius:6px;box-shadow:0 14px 30px -16px rgba(58,42,32,.6);margin-inline:auto;position:relative}
+.result > div{position:relative}
+.result h2{font:italic 600 21px/1.1 var(--display);margin:0 0 4px}
+.result .bar{flex-direction:column;align-items:stretch}
+
+aside{display:flex;flex-direction:column;gap:12px}
+.step{border-radius:20px;padding:13px}
+.step > *{position:relative}
+.step h3{margin:0 0 10px;font:700 9.5px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);display:flex;gap:7px;align-items:center}
+.step h3 b{font:italic 600 14px/1 var(--display);color:var(--rust);letter-spacing:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(120,80,50,.08);padding:3px;border-radius:12px}
+.chip{font:600 12px var(--body);border:0;border-radius:9px;padding:7px 6px;background:transparent;color:var(--ink);cursor:pointer;touch-action:manipulation}
+.chip[aria-pressed="true"]{background:var(--sel);box-shadow:0 2px 10px -4px rgba(90,50,20,.35);color:var(--rust)}
+.filters{grid-template-columns:repeat(3,1fr)}
+.room{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.code{font:600 24px/1 var(--body);letter-spacing:.24em;text-align:center;padding:10px;border-radius:12px;background:var(--sel);border:1px dashed var(--sun);font-variant-numeric:tabular-nums}
+.joinrow{display:flex;gap:6px}
+.joinrow input,.caption{min-width:0;font:600 13px var(--body);padding:8px 11px;border-radius:11px;border:1px solid var(--glass-line);background:rgba(255,255,255,.28);color:var(--ink)}
+.joinrow input{flex:1;letter-spacing:.2em;text-transform:uppercase}
+.caption{margin-top:8px;width:100%;font-weight:500}
+.joinrow input::placeholder,.caption::placeholder{color:var(--muted)}
+.or{font-size:11px;color:var(--muted);text-align:center}
+.tpls{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tpl{border:1px solid transparent;background:rgba(255,255,255,.2);border-radius:12px;padding:8px 4px 6px;cursor:pointer;color:var(--ink);font:600 10.5px var(--body);display:flex;flex-direction:column;align-items:center;gap:5px}
+.tpl svg{height:40px}
+.tpl[aria-pressed="true"]{background:var(--sel);border-color:color-mix(in srgb,var(--rust) 55%,transparent)}
+.ideas{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:250px;overflow:auto;padding:1px}
+.idea{text-align:left;border:1px solid transparent;background:rgba(255,255,255,.2);border-radius:12px;padding:8px 9px;cursor:pointer;color:var(--ink);font:500 11px/1.35 var(--body);min-width:0}
+.idea strong{display:block;font:italic 600 13px/1.2 var(--display);margin-bottom:2px}
+.idea img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}
+.idea[aria-pressed="true"]{background:var(--sel);border-color:color-mix(in srgb,var(--rust) 55%,transparent)}
+.idea.add{display:grid;place-items:center;text-align:center;border:1px dashed var(--muted);color:var(--muted);font-weight:600}
+.refbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+.link{background:none;border:0;color:var(--rust);font:600 11px var(--body);cursor:pointer;padding:4px}
+footer{margin-top:32px;padding:10px 16px;border-radius:99px;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
+footer > *{position:relative}
+footer svg{width:18px;height:18px}
+footer strong{color:var(--ink);font-weight:600}
+.err{color:var(--rust);font-size:12px;font-weight:600}
+.placeholder .err{color:#f0b48c}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}}
+button{touch-action:manipulation}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.glass{background:var(--glass-strong)}}
+</style>
+</head>
+<body>
+<div class="bg" id="bg" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span><div class="grain"></div></div>
+<canvas id="leaves" aria-hidden="true"></canvas>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="sunflower" viewBox="0 0 100 100">
+    <g transform="translate(50 50)">
+      <g fill="#e2a628">
+        <ellipse rx="9" ry="22" cy="-26"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(30)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(60)"/>
+        <ellipse rx="9" ry="22" cy="-26" transform="rotate(90)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(120)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(150)"/>
+        <ellipse rx="9" ry="22" cy="-26" transform="rotate(180)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(210)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(240)"/>
+        <ellipse rx="9" ry="22" cy="-26" transform="rotate(270)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(300)"/><ellipse rx="9" ry="22" cy="-26" transform="rotate(330)"/>
+      </g>
+      <circle r="17" fill="#5a3a22"/>
+      <circle r="17" fill="none" stroke="#3a2a20" stroke-width="2" stroke-dasharray="2 3"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="wrap">
+  <header class="glass">
+    <a class="logo" href="#" aria-label="elio басты бет">
+      <svg><use href="#sunflower"/></svg>
+      <span class="brand">elio<small>күзгі фотобудка</small></span>
+    </a>
+    <div class="status" id="status"><i></i><span id="statusText">Камера қосылмаған</span></div>
+  </header>
+
+  <main>
+    <section>
+      <div class="intro">
+      <h1>Күз келді. <em>Бірге</em> суретке түсейік.</h1>
+      <p class="lede">Жалғыз түсе бер немесе досыңды бөлме кодымен шақыр: ол үйінен қосылса да, екеуің бір таспаға түсесіңдер.</p>
+      </div>
+
+      <div class="frame glass" id="frame" data-tpl="strip">
+      <div class="stage" id="stage">
+        <div class="cams" id="cams">
+          <div class="cam" id="camLocal"><video id="local" autoplay playsinline muted></video><span class="tag">Сен</span></div>
+          <div class="cam" id="camRemote" hidden><video id="remote" autoplay playsinline></video><div class="wait" id="remoteWait">Досың әлі қосылмады.<br>Оған бөлме кодын жібер.</div><span class="tag">Досың</span></div>
+        </div>
+        <div class="placeholder" id="placeholder">
+          <div>
+            <svg width="54" height="54"><use href="#sunflower"/></svg>
+            <p>Фотобудка камераңды пайдаланады. Сурет тек сенің құрылғыңда жасалады.</p>
+            <button class="btn main" id="camBtn">Камераны қосу</button>
+            <p class="err" id="camErr" hidden></p>
+          </div>
+        </div>
+        <div id="refPip" hidden></div>
+        <div class="dots" id="dots"></div>
+        <div id="count"></div>
+        <div id="flash"></div>
+      </div>
+      </div>
+
+      <div class="bar">
+        <button class="btn main" id="shoot" disabled>Түсіруді бастау</button>
+        <span class="hint" id="shootHint">Әр кадр алдында 3 секунд кері санақ болады.</span>
+      </div>
+
+      <div class="result glass" id="result" hidden>
+        <canvas id="out"></canvas>
+        <div>
+          <h2>Дайын!</h2>
+          <p class="hint">Ұнаса, телефонға немесе компьютерге сақта. Ұнамаса, қайта түс.</p>
+          <div class="bar">
+            <button class="btn main" id="download">Суретті жүктеп алу</button>
+            <button class="btn" id="again">Қайта түсу</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="step glass">
+        <h3><b>1</b> Кіммен түсесің</h3>
+        <div class="seg" role="group" aria-label="Режим">
+          <button class="chip" data-mode="solo" aria-pressed="true">Жалғыз</button>
+          <button class="chip" data-mode="duo" aria-pressed="false">Екеуміз</button>
+        </div>
+        <div class="room" id="roomBox" hidden>
+          <div id="hostView" hidden>
+            <div class="hint" style="margin-bottom:6px">Бұл кодты досыңа жібер:</div>
+            <div class="code" id="codeOut">····</div>
+          </div>
+          <div id="roomActions">
+            <button class="btn" id="hostBtn" style="width:100%">Бөлме ашу</button>
+            <div class="or" style="margin:8px 0">немесе досыңның бөлмесіне кір</div>
+            <div class="joinrow">
+              <label for="joinCode" class="hint" hidden>Бөлме коды</label>
+              <input id="joinCode" maxlength="4" placeholder="КОД" autocomplete="off" aria-label="Бөлме коды">
+              <button class="btn" id="joinBtn">Қосылу</button>
+            </div>
+          </div>
+          <p class="err" id="roomErr" hidden></p>
+        </div>
+      </div>
+
+      <div class="step glass">
+        <h3><b>2</b> Шаблон</h3>
+        <div class="tpls" role="group" aria-label="Шаблон">
+          <button class="tpl" data-tpl="strip" aria-pressed="true">
+            <svg viewBox="0 0 30 62"><rect x="1" y="1" width="28" height="60" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="5" y="5" width="20" height="11" fill="#b4552c" opacity=".7"/><rect x="5" y="18" width="20" height="11" fill="#e2a628" opacity=".8"/><rect x="5" y="31" width="20" height="11" fill="#6d6b3b" opacity=".7"/><rect x="5" y="44" width="20" height="11" fill="#b4552c" opacity=".5"/></svg>
+            Таспа · 4
+          </button>
+          <button class="tpl" data-tpl="grid" aria-pressed="false">
+            <svg viewBox="0 0 48 62"><rect x="1" y="1" width="46" height="60" rx="2" fill="#3a2a20"/><rect x="5" y="5" width="18" height="22" fill="#e2a628" opacity=".85"/><rect x="25" y="5" width="18" height="22" fill="#b4552c" opacity=".8"/><rect x="5" y="29" width="18" height="22" fill="#b4552c" opacity=".6"/><rect x="25" y="29" width="18" height="22" fill="#6d6b3b" opacity=".9"/></svg>
+            Торкөз · 4
+          </button>
+          <button class="tpl" data-tpl="polaroid" aria-pressed="false">
+            <svg viewBox="0 0 50 62"><rect x="1" y="1" width="48" height="60" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="6" y="6" width="38" height="38" fill="#b4552c" opacity=".75"/><path d="M12 52h26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Полароид · 1
+          </button>
+        </div>
+        <input class="caption" id="caption" maxlength="40" placeholder="Суретке жазу (міндетті емес)" aria-label="Суретке жазу">
+      </div>
+
+      <div class="step glass">
+        <h3><b>3</b> Түсі</h3>
+        <div class="seg filters" role="group" aria-label="Түс">
+          <button class="chip" data-filter="color" aria-pressed="true">Түрлі-түсті</button>
+          <button class="chip" data-filter="bw" aria-pressed="false">Қара-ақ</button>
+          <button class="chip" data-filter="sepia" aria-pressed="false">Қоңыр</button>
+        </div>
+      </div>
+
+      <div class="step glass">
+        <h3><b>4</b> Референс қайтала</h3>
+        <div class="ideas" id="ideas"></div>
+        <div class="refbar">
+          <span class="hint">Мем не идеяны таңда да, сол сияқты түс.</span>
+          <button class="link" id="refClear">Жасыру</button>
+        </div>
+        <input type="file" id="refFile" accept="image/*" multiple hidden>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="glass">
+    <svg><use href="#sunflower"/></svg>
+    <span>© 2026 <strong>Батан Айару</strong>. Барлық құқықтар қорғалған.</span>
+    <span>·</span>
+    <span><strong>elio</strong> тобы үшін жасалды</span>
+  </footer>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* ============ ӨЗ РЕФЕРЕНСТЕРІҢДІ ОСЫНДА ҚОС ============
+   Суреттерді сайтпен бірге refs/ папкасына сал да, тізімге жаз:
+   { title: "Мем аты", src: "refs/meme1.jpg" }                      */
+/* ФОН СУРЕТІ: сайттың қасына сал да, атын жаз, мысалы "bg.jpg". Бос болса, градиент фон тұрады. */
+const BG_PHOTO = "";
+
+const REF_IMAGES = [
+  // { title: "Drake мем", src: "refs/drake.jpg" },
+];
+const IDEAS = [
+  { title: "Жүрек", hint: "Екі қолмен жүрек жасаңдар" },
+  { title: "Таң қалу", hint: "Ауызды аш, алақанды бетке қой" },
+  { title: "Жапырақ", hint: "Жапырақты бір көзге ұстап тұр" },
+  { title: "Сыбыр", hint: "Бірің екіншісінің құлағына сыбырла" },
+  { title: "Ойшыл", hint: "Иекті таянып, жоғары қара" },
+  { title: "Drake мемі", hint: "1-кадр: бас тарт, 2-кадр: саусақпен нұсқа" },
+  { title: "Шын күлкі", hint: "Көзді жұмып, қатты күліңдер" },
+  { title: "Шай уақыты", hint: "Шыныаяқты екі қолмен ұста" },
+];
+/* ====================================================== */
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const PREFIX = "elio-booth-";
+const state = { mode:"solo", tpl:"strip", filter:"color", ref:null, busy:false };
+let localStream = null, peer = null, conn = null, remoteLive = false, lastBlob = null;
+let customRefs = [];
+try { customRefs = JSON.parse(localStorage.getItem("elio-refs") || "[]"); } catch(e) {}
+
+const TPL = {
+  strip:    { shots:4, cw:568, ch:426 },
+  grid:     { shots:4, cw:537, ch:671 },
+  polaroid: { shots:1, cw:940, ch:940 },
+};
+
+/* ---------- статус ---------- */
+function setStatus(text, live){ $("#statusText").textContent = text; $("#status").classList.toggle("live", !!live); }
+
+/* ---------- камера ---------- */
+async function ensureCam(){
+  if (localStream) return true;
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user", width:{ideal:1280}, height:{ideal:960} }, audio:false });
+    $("#local").srcObject = localStream;
+    $("#placeholder").hidden = true;
+    $("#shoot").disabled = false;
+    setStatus(state.mode === "duo" ? "Бөлмеге дайын" : "Камера дайын", true);
+    return true;
+  }catch(e){
+    const err = $("#camErr");
+    err.hidden = false;
+    err.textContent = (location.protocol !== "https:" && location.hostname !== "localhost")
+      ? "Камера тек https:// арқылы ашылған сайтта жұмыс істейді."
+      : "Камераға рұқсат берілмеді. Браузер баптауларынан рұқсат беріп, қайта басыңыз.";
+    return false;
+  }
+}
+$("#camBtn").onclick = ensureCam;
+
+/* ---------- режим ---------- */
+$$("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+function setMode(m){
+  state.mode = m;
+  $$("[data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
+  $("#roomBox").hidden = m !== "duo";
+  $("#camRemote").hidden = m !== "duo";
+  $("#cams").classList.toggle("duo", m === "duo");
+  if (m === "solo") leaveRoom();
+  if (localStream) setStatus(m === "duo" ? "Бөлмеге дайын" : "Камера дайын", true);
+}
+
+/* ---------- бөлме (PeerJS) ---------- */
+function genCode(){ const a="ABCDEFGHJKMNPQRSTUVWXYZ23456789"; return Array.from({length:4},()=>a[Math.floor(Math.random()*a.length)]).join(""); }
+function roomError(t){ const e=$("#roomErr"); e.textContent=t; e.hidden=!t; }
+
+async function hostRoom(){
+  roomError("");
+  if (!(await ensureCam())) return;
+  if (!window.Peer) return roomError("Байланыс кітапханасы жүктелмеді. Интернетті тексеріңіз.");
+  leaveRoom();
+  const code = genCode();
+  peer = new Peer(PREFIX + code);
+  peer.on("open", () => {
+    $("#codeOut").textContent = code;
+    $("#hostView").hidden = false; $("#roomActions").hidden = true;
+    setStatus("Бөлме " + code + " · досыңды күтудеміз", true);
+  });
+  peer.on("call", call => { call.answer(localStream); bindCall(call); });
+  peer.on("connection", c => bindConn(c));
+  peer.on("error", e => { if (e.type === "unavailable-id") hostRoom(); else roomError("Байланыс қатесі: " + e.type); });
+}
+
+async function joinRoom(){
+  roomError("");
+  const code = $("#joinCode").value.trim().toUpperCase();
+  if (code.length !== 4) return roomError("Код 4 таңбадан тұрады.");
+  if (!(await ensureCam())) return;
+  if (!window.Peer) return roomError("Байланыс кітапханасы жүктелмеді. Интернетті тексеріңіз.");
+  leaveRoom();
+  peer = new Peer();
+  peer.on("open", () => {
+    bindConn(peer.connect(PREFIX + code, { reliable:true }));
+    bindCall(peer.call(PREFIX + code, localStream));
+    setStatus("Бөлме " + code + " · қосылып жатыр", true);
+  });
+  peer.on("error", e => roomError(e.type === "peer-unavailable" ? "Мұндай бөлме табылмады. Кодты тексер." : "Байланыс қатесі: " + e.type));
+}
+
+function bindCall(call){
+  if (!call) return;
+  call.on("stream", s => {
+    const v = $("#remote"); v.srcObject = s; v.play().catch(()=>{});
+    remoteLive = true; $("#remoteWait").hidden = true;
+    setStatus("Досың қосылды", true);
+  });
+  call.on("close", remoteGone);
+}
+function bindConn(c){
+  conn = c;
+  c.on("open", sendSettings);
+  c.on("data", msg => {
+    if (!msg || typeof msg !== "object") return;
+    if (msg.type === "settings") applySettings(msg, false);
+    if (msg.type === "start") { applySettings(msg, false); runSession(); }
+  });
+  c.on("close", remoteGone);
+}
+function remoteGone(){
+  remoteLive = false; $("#remote").srcObject = null; $("#remoteWait").hidden = false;
+  if (state.mode === "duo") setStatus("Досың шығып кетті", false);
+}
+function leaveRoom(){
+  if (peer) { try{ peer.destroy(); }catch(e){} }
+  peer = null; conn = null; remoteGone();
+  $("#hostView").hidden = true; $("#roomActions").hidden = false;
+}
+$("#hostBtn").onclick = hostRoom;
+$("#joinBtn").onclick = joinRoom;
+$("#joinCode").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom(); });
+
+/* ---------- баптаулар ---------- */
+function settingsMsg(type){ return { type, tpl:state.tpl, filter:state.filter, idea: typeof state.ref === "number" ? state.ref : null, caption: $("#caption").value }; }
+function sendSettings(){ if (conn && conn.open) conn.send(settingsMsg("settings")); }
+function applySettings(s, broadcast=true){
+  if (s.tpl && TPL[s.tpl]) state.tpl = s.tpl;
+  if (["color","bw","sepia"].includes(s.filter)) state.filter = s.filter;
+  if (typeof s.idea === "number" && IDEAS[s.idea]) state.ref = s.idea;
+  if (typeof s.caption === "string") $("#caption").value = s.caption.slice(0,40);
+  $$("[data-tpl]").forEach(b => b.matches("button") && b.setAttribute("aria-pressed", b.dataset.tpl === state.tpl));
+  $("#frame").dataset.tpl = state.tpl;
+  $$("[data-filter]").forEach(b => b.setAttribute("aria-pressed", b.dataset.filter === state.filter));
+  $("#cams").className = "cams" + (state.mode === "duo" ? " duo" : "") + (state.filter !== "color" ? " f-" + state.filter : "");
+  renderIdeas(); renderPip(); renderDots(0);
+  if (broadcast) sendSettings();
+}
+$$("button[data-tpl]").forEach(b => b.onclick = () => applySettings({ tpl:b.dataset.tpl }));
+$$("[data-filter]").forEach(b => b.onclick = () => applySettings({ filter:b.dataset.filter }));
+$("#caption").addEventListener("change", sendSettings);
+
+/* ---------- референстер ---------- */
+function allImageRefs(){ return [...REF_IMAGES, ...customRefs]; }
+function renderIdeas(){
+  const box = $("#ideas"); box.textContent = "";
+  allImageRefs().forEach((r, i) => {
+    const b = document.createElement("button");
+    b.className = "idea"; b.setAttribute("aria-pressed", state.ref === "img" + i);
+    const img = document.createElement("img"); img.src = r.src; img.alt = r.title || "Референс";
+    b.append(img); b.onclick = () => { state.ref = state.ref === "img"+i ? null : "img"+i; renderIdeas(); renderPip(); };
+    box.append(b);
+  });
+  IDEAS.forEach((r, i) => {
+    const b = document.createElement("button");
+    b.className = "idea"; b.setAttribute("aria-pressed", state.ref === i);
+    const s = document.createElement("strong"); s.textContent = r.title;
+    b.append(s, document.createTextNode(r.hint));
+    b.onclick = () => { state.ref = state.ref === i ? null : i; renderIdeas(); renderPip(); sendSettings(); };
+    box.append(b);
+  });
+  const add = document.createElement("button");
+  add.className = "idea add"; add.textContent = "+ Мем/сурет қосу";
+  add.onclick = () => $("#refFile").click();
+  box.append(add);
+}
+function renderPip(){
+  const p = $("#refPip"); p.textContent = "";
+  if (state.ref === null) { p.hidden = true; return; }
+  const lbl = document.createElement("div"); lbl.className = "lbl"; lbl.textContent = "Қайтала";
+  p.append(lbl);
+  if (typeof state.ref === "number") {
+    const r = IDEAS[state.ref];
+    const s = document.createElement("strong"); s.textContent = r.title;
+    const h = document.createElement("span"); h.textContent = r.hint;
+    p.append(s, h);
+  } else {
+    const r = allImageRefs()[+state.ref.slice(3)];
+    if (!r) { state.ref = null; p.hidden = true; return; }
+    const img = document.createElement("img"); img.src = r.src; img.alt = r.title || "Референс";
+    p.append(img);
+  }
+  p.hidden = false;
+}
+$("#refClear").onclick = () => { state.ref = null; renderIdeas(); renderPip(); };
+$("#refFile").onchange = async e => {
+  for (const f of e.target.files) {
+    const src = await shrink(f, 480);
+    customRefs.push({ title:f.name, src });
+  }
+  try { localStorage.setItem("elio-refs", JSON.stringify(customRefs.slice(-12))); } catch(err) {}
+  state.ref = "img" + (allImageRefs().length - 1);
+  e.target.value = ""; renderIdeas(); renderPip();
+};
+function shrink(file, max){
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = img.width*k; c.height = img.height*k;
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src); res(c.toDataURL("image/jpeg", .82));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/* ---------- түсіру ---------- */
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function renderDots(done){
+  const n = TPL[state.tpl].shots, d = $("#dots"); d.textContent = "";
+  for (let i=0;i<n;i++){ const b=document.createElement("b"); if(i<done) b.className="done"; d.append(b); }
+}
+async function countdown(){
+  const c = $("#count");
+  for (let n=3;n>0;n--){ c.textContent = n; await wait(900); }
+  c.textContent = "";
+}
+function flash(){ const f=$("#flash"); f.classList.add("on"); requestAnimationFrame(()=>requestAnimationFrame(()=>f.classList.remove("on"))); }
+
+function drawCover(ctx, video, x, y, w, h){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw) { ctx.fillStyle="#2a201a"; ctx.fillRect(x,y,w,h); return; }
+  const k = Math.max(w/vw, h/vh), sw = w/k, sh = h/k;
+  ctx.save(); ctx.translate(x+w, y); ctx.scale(-1, 1);
+  ctx.drawImage(video, (vw-sw)/2, (vh-sh)/2, sw, sh, 0, 0, w, h);
+  ctx.restore();
+}
+function applyFilter(ctx, w, h){
+  if (state.filter === "color") return;
+  const im = ctx.getImageData(0,0,w,h), d = im.data;
+  for (let i=0;i<d.length;i+=4){
+    const r=d[i], g=d[i+1], b=d[i+2];
+    if (state.filter === "bw"){
+      let l = .299*r + .587*g + .114*b; l = (l-128)*1.1+128;
+      d[i]=d[i+1]=d[i+2]=l;
+    } else {
+      d[i]   = .393*r + .769*g + .189*b;
+      d[i+1] = .349*r + .686*g + .168*b;
+      d[i+2] = (.272*r + .534*g + .131*b) * .92;
+    }
+  }
+  ctx.putImageData(im,0,0);
+}
+function grab(w, h){
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  if (state.mode === "duo" && remoteLive){
+    const half = (w - 6) / 2;
+    drawCover(ctx, $("#local"), 0, 0, half, h);
+    drawCover(ctx, $("#remote"), half + 6, 0, half, h);
+    ctx.fillStyle = "#fbf6ef"; ctx.fillRect(half, 0, 6, h);
+  } else drawCover(ctx, $("#local"), 0, 0, w, h);
+  applyFilter(ctx, w, h);
+  return c;
+}
+
+async function runSession(){
+  if (state.busy || !localStream) return;
+  state.busy = true; $("#shoot").disabled = true; $("#result").hidden = true;
+  const t = TPL[state.tpl], shots = [];
+  renderDots(0);
+  for (let i=0;i<t.shots;i++){
+    await countdown();
+    shots.push(grab(t.cw, t.ch)); flash(); renderDots(i+1);
+    await wait(700);
+  }
+  await composeOut(shots);
+  $("#result").hidden = false;
+  $("#result").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"nearest" });
+  state.busy = false; $("#shoot").disabled = false;
+}
+$("#shoot").onclick = () => {
+  if (state.busy) return;
+  if (conn && conn.open) conn.send(settingsMsg("start"));
+  runSession();
+};
+$("#again").onclick = () => { $("#result").hidden = true; renderDots(0); $("#frame").scrollIntoView({ block:"nearest" }); };
+
+/* ---------- шаблонды салу ---------- */
+function sunflower(ctx, x, y, r){
+  ctx.save(); ctx.translate(x, y); ctx.fillStyle = "#e2a628";
+  for (let i=0;i<12;i++){ ctx.save(); ctx.rotate(i*Math.PI/6); ctx.beginPath(); ctx.ellipse(0, -r*.52, r*.18, r*.44, 0, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle = "#5a3a22"; ctx.beginPath(); ctx.arc(0,0,r*.34,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function leaf(ctx, x, y, s, rot, color){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.fillStyle = color;
+  ctx.beginPath(); ctx.moveTo(0,-s); ctx.quadraticCurveTo(s*.85,-s*.2,0,s); ctx.quadraticCurveTo(-s*.85,-s*.2,0,-s); ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = Math.max(1, s*.06);
+  ctx.beginPath(); ctx.moveTo(0,-s*.8); ctx.lineTo(0,s*1.25); ctx.stroke();
+  ctx.restore();
+}
+function dateStr(){ const d=new Date(); return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear(); }
+
+async function composeOut(shots){
+  try{ await Promise.all([document.fonts.load('italic 600 60px "Fraunces"'), document.fonts.load('600 20px "Montserrat"')]); }catch(e){}
+  const out = $("#out"), ctx = out.getContext("2d"), cap = $("#caption").value.trim();
+  const bw = state.filter === "bw";
+  const paper = bw ? "#f3f1ed" : "#f7efe3", ink = "#3a2a20";
+  const leafCols = bw ? ["#8d8a85","#b5b2ac","#6b6863"] : ["#b4552c","#e2a628","#6d6b3b","#8a4a26"];
+
+  if (state.tpl === "strip"){
+    const W=640, P=36, G=22, F=170, t=TPL.strip, H=P+4*t.ch+3*G+F;
+    out.width=W; out.height=H;
+    ctx.fillStyle=paper; ctx.fillRect(0,0,W,H);
+    shots.forEach((s,i)=>{ const y=P+i*(t.ch+G); ctx.drawImage(s,P,y); ctx.strokeStyle="rgba(58,42,32,.25)"; ctx.lineWidth=2; ctx.strokeRect(P,y,t.cw,t.ch); });
+    const fy = H - F;
+    sunflower(ctx, W/2-70, fy+62, 46);
+    ctx.fillStyle=ink; ctx.textBaseline="middle";
+    ctx.font='italic 600 58px "Fraunces", Georgia, serif'; ctx.textAlign="left"; ctx.fillText("elio", W/2-30, fy+58);
+    ctx.textAlign="center"; ctx.font='600 17px "Montserrat", Arial, sans-serif'; ctx.fillStyle="#8a725f";
+    ctx.fillText((cap ? cap + "  ·  " : "") + dateStr(), W/2, fy+120);
+    leaf(ctx, 70, fy+80, 26, -.6, leafCols[0]); leaf(ctx, W-70, fy+70, 22, .7, leafCols[1]); leaf(ctx, W-110, fy+110, 16, 2.2, leafCols[2]);
+  }
+  else if (state.tpl === "grid"){
+    const W=1200, P=50, G=26, F=210, t=TPL.grid, H=P+2*t.ch+G+F;
+    out.width=W; out.height=H;
+    const bg = bw ? "#2b2a28" : "#3a2a20", cream = "#f7efe3";
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    shots.forEach((s,i)=>{ const x=P+(i%2)*(t.cw+G), y=P+Math.floor(i/2)*(t.ch+G); ctx.drawImage(s,x,y); });
+    const fy = H - F;
+    sunflower(ctx, P+60, fy+100, 70);
+    ctx.textBaseline="middle"; ctx.textAlign="left"; ctx.fillStyle=cream;
+    ctx.font='italic 600 84px "Fraunces", Georgia, serif'; ctx.fillText("elio", P+140, fy+92);
+    ctx.font='600 20px "Montserrat", Arial, sans-serif'; ctx.fillStyle = bw ? "#bdb8b0" : "#e2a628";
+    ctx.fillText("КҮЗГІ ФОТОБУДКА", P+144, fy+150);
+    ctx.textAlign="right"; ctx.fillStyle=cream; ctx.font='500 24px "Montserrat", Arial, sans-serif';
+    ctx.fillText(dateStr(), W-P, fy+150);
+    if (cap){ ctx.font='italic 400 40px "Fraunces", Georgia, serif'; ctx.fillText(cap, W-P, fy+92); }
+    leaf(ctx, W-P-20, fy+30, 22, .5, leafCols[1]);
+  }
+  else {
+    const W=1080, P=70, F=270, t=TPL.polaroid, H=P+t.ch+F;
+    out.width=W; out.height=H;
+    ctx.fillStyle = bw ? "#f5f4f1" : "#fbf6ef"; ctx.fillRect(0,0,W,H);
+    ctx.drawImage(shots[0], P, P);
+    const fy = P + t.ch;
+    ctx.textBaseline="middle"; ctx.fillStyle=ink; ctx.textAlign="center";
+    ctx.font='italic 400 64px "Fraunces", Georgia, serif';
+    ctx.fillText(cap || "біздің күз", W/2, fy+105);
+    ctx.font='600 18px "Montserrat", Arial, sans-serif'; ctx.fillStyle="#8a725f";
+    ctx.fillText("elio  ·  " + dateStr(), W/2, fy+185);
+    sunflower(ctx, W-P-40, fy+110, 52);
+    leaf(ctx, P+40, fy+120, 30, -.5, leafCols[0]); leaf(ctx, P+90, fy+150, 20, 1.1, leafCols[2]);
+  }
+  lastBlob = await new Promise(r => out.toBlob(r, "image/png"));
+}
+
+$("#download").onclick = () => {
+  if (!lastBlob) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(lastBlob);
+  a.download = "elio-" + dateStr().replace(/\./g,"-") + "-" + Date.now().toString().slice(-4) + ".png";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+};
+
+/* ---------- түсіп жатқан жапырақтар ---------- */
+(function leaves(){
+  const c = $("#leaves"), x = c.getContext("2d");
+  const cols = ["#b4552c","#e2a628","#c9782f","#6d6b3b","#8a4a26"];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, L = [];
+  function size(){ const d = devicePixelRatio || 1; W = innerWidth; H = innerHeight; c.width = W*d; c.height = H*d; x.setTransform(d,0,0,d,0,0); }
+  function mk(init){ return { x:Math.random()*W, y:init?Math.random()*H:-40, s:8+Math.random()*12, vy:.35+Math.random()*.7,
+    sw:Math.random()*6.28, sws:.008+Math.random()*.015, amp:18+Math.random()*40, r:Math.random()*6.28, vr:(Math.random()-.5)*.025,
+    fl:Math.random()*6.28, c:cols[Math.floor(Math.random()*cols.length)], bx:0 }; }
+  function draw(l){
+    x.save(); x.globalAlpha=.42; x.translate(l.x + Math.sin(l.sw)*l.amp, l.y); x.rotate(l.r); x.scale(1, Math.max(.25, Math.abs(Math.cos(l.fl))));
+    x.fillStyle=l.c; x.beginPath(); x.moveTo(0,-l.s); x.quadraticCurveTo(l.s*.85,-l.s*.2,0,l.s); x.quadraticCurveTo(-l.s*.85,-l.s*.2,0,-l.s); x.fill();
+    x.strokeStyle="rgba(58,42,32,.35)"; x.lineWidth=1; x.beginPath(); x.moveTo(0,-l.s*.8); x.lineTo(0,l.s*1.3); x.stroke();
+    x.restore();
+  }
+  function tick(){
+    x.clearRect(0,0,W,H);
+    for (const l of L){ l.y+=l.vy; l.sw+=l.sws; l.r+=l.vr; l.fl+=.02; if (l.y>H+40) Object.assign(l, mk(false)); draw(l); }
+    requestAnimationFrame(tick);
+  }
+  size(); addEventListener("resize", size);
+  L = Array.from({ length: W < 600 ? 8 : 14 }, () => mk(true));
+  if (reduce) L.forEach(draw); else tick();
+})();
+
+if (BG_PHOTO) { const bg=$("#bg"); bg.style.setProperty("--bg-photo", "url(\"" + BG_PHOTO + "\")"); bg.classList.add("photo"); }
+applySettings({}, false);
+</script>
+</body>
+</html>
