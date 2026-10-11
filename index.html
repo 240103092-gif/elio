@@ -134,6 +134,14 @@ aside{display:flex;flex-direction:column;gap:12px}
 .tpl{border:1px solid transparent;background:rgba(255,255,255,.2);border-radius:12px;padding:8px 4px 6px;cursor:pointer;color:var(--ink);font:600 10.5px var(--body);display:flex;flex-direction:column;align-items:center;gap:5px}
 .tpl svg{height:40px}
 .tpl[aria-pressed="true"]{background:var(--sel);border-color:color-mix(in srgb,var(--rust) 55%,transparent)}
+.frames{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fr{border:1px solid transparent;background:rgba(255,255,255,.2);border-radius:12px;padding:7px 6px 6px;cursor:pointer;color:var(--ink);font:600 10.5px var(--body);display:flex;flex-direction:column;align-items:center;gap:5px}
+.fr i{display:grid;grid-template-rows:1fr 1fr 1fr .7fr;gap:3px;width:34px;height:46px;padding:4px;border-radius:4px;box-shadow:0 2px 6px -2px rgba(0,0,0,.35);position:relative;overflow:hidden}
+.fr i span{background:rgba(120,90,70,.45);border-radius:1px}
+.fr i span:last-child{background:none}
+.fr i.film{border-left:3px dotted #f2e8dc55;border-right:3px dotted #f2e8dc55}
+.fr[aria-pressed="true"]{background:var(--sel);border-color:color-mix(in srgb,var(--rust) 55%,transparent)}
+.fr:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
 .ideas{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:250px;overflow:auto;padding:1px}
 .idea{text-align:left;border:1px solid transparent;background:rgba(255,255,255,.2);border-radius:12px;padding:8px 9px;cursor:pointer;color:var(--ink);font:500 11px/1.35 var(--body);min-width:0}
 .idea strong{display:block;font:italic 600 13px/1.2 var(--display);margin-bottom:2px}
@@ -272,7 +280,12 @@ button{touch-action:manipulation}
       </div>
 
       <div class="step glass">
-        <h3><b>3</b> Түсі</h3>
+        <h3><b>3</b> Рамка</h3>
+        <div class="frames" id="frames" role="group" aria-label="Рамка"></div>
+      </div>
+
+      <div class="step glass">
+        <h3><b>4</b> Түсі</h3>
         <div class="seg filters" role="group" aria-label="Түс">
           <button class="chip" data-filter="color" aria-pressed="true">Түрлі-түсті</button>
           <button class="chip" data-filter="bw" aria-pressed="false">Қара-ақ</button>
@@ -281,7 +294,7 @@ button{touch-action:manipulation}
       </div>
 
       <div class="step glass">
-        <h3><b>4</b> Референс қайтала</h3>
+        <h3><b>5</b> Референс қайтала</h3>
         <div class="ideas" id="ideas"></div>
         <div class="refbar">
           <span class="hint">Мем не идеяны таңда да, сол сияқты түс.</span>
@@ -327,7 +340,7 @@ const LOGO_SRC = "data:image/webp;base64,UklGRmwmAABXRUJQVlA4WAoAAAAQAAAAnwAAnwA
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const PREFIX = "elio-booth-";
-const state = { mode:"solo", tpl:"strip", filter:"color", ref:null, busy:false };
+const state = { mode:"solo", tpl:"strip", frame:"cream", filter:"color", ref:null, busy:false };
 let localStream = null, peer = null, conn = null, remoteLive = false, lastBlob = null;
 let customRefs = [];
 try { customRefs = JSON.parse(localStorage.getItem("elio-refs") || "[]"); } catch(e) {}
@@ -463,10 +476,11 @@ $("#joinBtn").onclick = joinRoom;
 $("#joinCode").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom(); });
 
 /* ---------- баптаулар ---------- */
-function settingsMsg(type){ return { type, tpl:state.tpl, filter:state.filter, idea: typeof state.ref === "number" ? state.ref : null, caption: $("#caption").value }; }
+function settingsMsg(type){ return { type, tpl:state.tpl, frame:state.frame, filter:state.filter, idea: typeof state.ref === "number" ? state.ref : null, caption: $("#caption").value }; }
 function sendSettings(){ if (conn && conn.open) conn.send(settingsMsg("settings")); }
 function applySettings(s, broadcast=true){
   if (s.tpl && TPL[s.tpl]) state.tpl = s.tpl;
+  if (s.frame && FRAMES[s.frame]) state.frame = s.frame;
   if (["color","bw","sepia"].includes(s.filter)) state.filter = s.filter;
   if (typeof s.idea === "number" && IDEAS[s.idea]) state.ref = s.idea;
   if (typeof s.caption === "string") $("#caption").value = s.caption.slice(0,40);
@@ -474,7 +488,7 @@ function applySettings(s, broadcast=true){
   $("#frame").dataset.tpl = state.tpl;
   $$("[data-filter]").forEach(b => b.setAttribute("aria-pressed", b.dataset.filter === state.filter));
   $("#cams").className = "cams" + (state.mode === "duo" ? " duo" : "") + (state.filter !== "color" ? " f-" + state.filter : "");
-  renderIdeas(); renderPip(); renderDots(0);
+  renderFrames(); renderIdeas(); renderPip(); renderDots(0);
   if (broadcast) sendSettings();
 }
 $$("button[data-tpl]").forEach(b => b.onclick = () => applySettings({ tpl:b.dataset.tpl }));
@@ -638,61 +652,101 @@ function leaf(ctx, x, y, s, rot, color){
 }
 function dateStr(){ const d=new Date(); return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear(); }
 
+
+/* ---------- рамкалар (сыртқы қабы) ---------- */
+const FRAMES = {
+  cream: { name:"Сүт",      bg:"#f7efe3", ink:"#3a2a20", sub:"#8a725f", light:true,  leafCols:["#b4552c","#e2a628","#6d6b3b"] },
+  cocoa: { name:"Какао",    bg:"#3a2a20", ink:"#f7efe3", sub:"#e2a628",              leafCols:["#e2a628","#c9782f","#a3a065"] },
+  leaf:  { name:"Жапырақ",  bg:"#b4552c", ink:"#fff6ec", sub:"#f8dcae", pattern:true, leafCols:["#f2c14e","#e98a4f","#7a2f12","#fbe3c0"] },
+  sun:   { name:"Күнбағыс", bg:"#f2c14e", ink:"#3a2a20", sub:"#6b4a1f", light:true,  leafCols:["#b4552c","#6d6b3b","#8a4a26"] },
+  film:  { name:"Пленка",   bg:"#161110", ink:"#f2e8dc", sub:"#a8968a", film:true,   leafCols:["#e2a628","#b4552c","#6d6b3b"] },
+  dusk:  { name:"Шұғыла",   grad:["#f6cf8e","#e08752","#9a4321"], ink:"#fff7ee", sub:"#fde7c8", leafCols:["#fbe3c0","#7a2f12","#f2c14e"] },
+};
+function frameCss(f){ return f.grad ? "linear-gradient(160deg," + f.grad.join(",") + ")" : f.bg; }
+function renderFrames(){
+  const box = $("#frames"); if (!box) return; box.textContent = "";
+  Object.entries(FRAMES).forEach(([k, f]) => {
+    const b = document.createElement("button");
+    b.className = "fr"; b.setAttribute("aria-pressed", state.frame === k);
+    const i = document.createElement("i"); i.style.background = frameCss(f); if (f.film) i.className = "film";
+    for (let n=0;n<4;n++) i.append(document.createElement("span"));
+    b.append(i, document.createTextNode(f.name));
+    b.onclick = () => applySettings({ frame:k });
+    box.append(b);
+  });
+}
+function rrect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function paintFrame(ctx, W, H, P, f){
+  if (f.grad){ const g = ctx.createLinearGradient(0, 0, W*.5, H); f.grad.forEach((c,i)=>g.addColorStop(i/(f.grad.length-1), c)); ctx.fillStyle = g; }
+  else ctx.fillStyle = f.bg;
+  ctx.fillRect(0, 0, W, H);
+  if (f.pattern){
+    let seed = 11; const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    const n = Math.round(W * H / 7000);
+    ctx.save(); ctx.globalAlpha = .28;
+    for (let i=0;i<n;i++) leaf(ctx, rnd()*W, rnd()*H, 9 + rnd()*18, rnd()*6.28, f.leafCols[i % f.leafCols.length]);
+    ctx.restore();
+  }
+  if (f.film){
+    ctx.fillStyle = "#f2e8dc"; ctx.globalAlpha = .85;
+    const hw = Math.min(16, P*.42), hh = hw*1.35, step = hh*2.1;
+    for (let y = step/2; y < H; y += step) [P/2, W-P/2].forEach(cx => { rrect(ctx, cx-hw/2, y-hh/2, hw, hh, 3); ctx.fill(); });
+    ctx.globalAlpha = 1;
+  }
+}
+function photo(ctx, img, x, y, f){
+  ctx.drawImage(img, x, y);
+  ctx.strokeStyle = f.light ? "rgba(58,42,32,.25)" : "rgba(255,255,255,.18)"; ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, img.width, img.height);
+}
+
 async function composeOut(shots){
   try{ await Promise.all([document.fonts.load('italic 600 60px "Fraunces"'), document.fonts.load('600 20px "Montserrat"')]); }catch(e){}
   const out = $("#out"), ctx = out.getContext("2d"), cap = $("#caption").value.trim();
-  const bw = state.filter === "bw";
-  const paper = bw ? "#f3f1ed" : "#f7efe3", ink = "#3a2a20";
-  const leafCols = bw ? ["#8d8a85","#b5b2ac","#6b6863"] : ["#b4552c","#e2a628","#6d6b3b","#8a4a26"];
+  const f = FRAMES[state.frame] || FRAMES.cream, L = f.leafCols;
+  const disp = 'italic 600 {s}px "Fraunces", Georgia, serif', body = '600 {s}px "Montserrat", Arial, sans-serif';
+  const font = (t, s) => t.replace("{s}", s);
+  ctx.textBaseline = "middle";
 
   if (state.tpl === "strip"){
     const W=640, P=36, G=22, F=170, t=TPL.strip, H=P+4*t.ch+3*G+F;
-    out.width=W; out.height=H;
-    ctx.fillStyle=paper; ctx.fillRect(0,0,W,H);
-    shots.forEach((s,i)=>{ const y=P+i*(t.ch+G); ctx.drawImage(s,P,y); ctx.strokeStyle="rgba(58,42,32,.25)"; ctx.lineWidth=2; ctx.strokeRect(P,y,t.cw,t.ch); });
+    out.width=W; out.height=H; paintFrame(ctx, W, H, P, f);
+    shots.forEach((s,i)=> photo(ctx, s, P, P+i*(t.ch+G), f));
     const fy = H - F;
-    sunflower(ctx, W/2-70, fy+62, 46);
-    ctx.fillStyle=ink; ctx.textBaseline="middle";
-    ctx.font='italic 600 58px "Fraunces", Georgia, serif'; ctx.textAlign="left"; ctx.fillText("elio", W/2-30, fy+58);
-    ctx.textAlign="center"; ctx.font='600 17px "Montserrat", Arial, sans-serif'; ctx.fillStyle="#8a725f";
+    sunflower(ctx, W/2-70, fy+62, 40);
+    ctx.fillStyle=f.ink; ctx.textAlign="left"; ctx.font=font(disp,58); ctx.fillText("elio", W/2-22, fy+58);
+    ctx.textAlign="center"; ctx.fillStyle=f.sub; ctx.font=font(body,17);
     ctx.fillText((cap ? cap + "  ·  " : "") + dateStr(), W/2, fy+120);
-    leaf(ctx, 70, fy+80, 26, -.6, leafCols[0]); leaf(ctx, W-70, fy+70, 22, .7, leafCols[1]); leaf(ctx, W-110, fy+110, 16, 2.2, leafCols[2]);
+    if (!f.pattern){ leaf(ctx, 70, fy+80, 26, -.6, L[0]); leaf(ctx, W-70, fy+70, 22, .7, L[1]); leaf(ctx, W-110, fy+110, 16, 2.2, L[2]); }
   }
   else if (state.tpl === "grid"){
     const W=1200, P=50, G=26, F=210, t=TPL.grid, H=P+2*t.ch+G+F;
-    out.width=W; out.height=H;
-    const bg = bw ? "#2b2a28" : "#3a2a20", cream = "#f7efe3";
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    shots.forEach((s,i)=>{ const x=P+(i%2)*(t.cw+G), y=P+Math.floor(i/2)*(t.ch+G); ctx.drawImage(s,x,y); });
+    out.width=W; out.height=H; paintFrame(ctx, W, H, P, f);
+    shots.forEach((s,i)=> photo(ctx, s, P+(i%2)*(t.cw+G), P+Math.floor(i/2)*(t.ch+G), f));
     const fy = H - F;
-    sunflower(ctx, P+60, fy+100, 70);
-    ctx.textBaseline="middle"; ctx.textAlign="left"; ctx.fillStyle=cream;
-    ctx.font='italic 600 84px "Fraunces", Georgia, serif'; ctx.fillText("elio", P+140, fy+92);
-    ctx.font='600 20px "Montserrat", Arial, sans-serif'; ctx.fillStyle = bw ? "#bdb8b0" : "#e2a628";
-    ctx.fillText("КҮЗГІ ФОТОБУДКА", P+144, fy+150);
-    ctx.textAlign="right"; ctx.fillStyle=cream; ctx.font='500 24px "Montserrat", Arial, sans-serif';
+    sunflower(ctx, P+60, fy+100, 60);
+    ctx.textAlign="left"; ctx.fillStyle=f.ink; ctx.font=font(disp,84); ctx.fillText("elio", P+140, fy+92);
+    ctx.font=font(body,20); ctx.fillStyle=f.sub; ctx.fillText("КҮЗГІ ФОТОБУДКА", P+144, fy+150);
+    ctx.textAlign="right"; ctx.fillStyle=f.ink; ctx.font='500 24px "Montserrat", Arial, sans-serif';
     ctx.fillText(dateStr(), W-P, fy+150);
     if (cap){ ctx.font='italic 400 40px "Fraunces", Georgia, serif'; ctx.fillText(cap, W-P, fy+92); }
-    leaf(ctx, W-P-20, fy+30, 22, .5, leafCols[1]);
+    if (!f.pattern) leaf(ctx, W-P-20, fy+30, 22, .5, L[0]);
   }
   else {
     const W=1080, P=70, F=270, t=TPL.polaroid, H=P+t.ch+F;
-    out.width=W; out.height=H;
-    ctx.fillStyle = bw ? "#f5f4f1" : "#fbf6ef"; ctx.fillRect(0,0,W,H);
-    ctx.drawImage(shots[0], P, P);
+    out.width=W; out.height=H; paintFrame(ctx, W, H, P, f);
+    photo(ctx, shots[0], P, P, f);
     const fy = P + t.ch;
-    ctx.textBaseline="middle"; ctx.fillStyle=ink; ctx.textAlign="center";
+    ctx.fillStyle=f.ink; ctx.textAlign="center";
     if (cap){
       ctx.font='italic 400 64px "Fraunces", Georgia, serif'; ctx.fillText(cap, W/2, fy+105);
-      ctx.font='600 18px "Montserrat", Arial, sans-serif'; ctx.fillStyle="#8a725f";
-      ctx.fillText("elio  ·  " + dateStr(), W/2, fy+185);
+      ctx.font=font(body,18); ctx.fillStyle=f.sub; ctx.fillText("elio  ·  " + dateStr(), W/2, fy+185);
     } else {
-      ctx.font='italic 600 72px "Fraunces", Georgia, serif'; ctx.fillText("elio", W/2, fy+115);
-      ctx.font='600 18px "Montserrat", Arial, sans-serif'; ctx.fillStyle="#8a725f";
-      ctx.fillText(dateStr(), W/2, fy+190);
+      ctx.font=font(disp,72); ctx.fillText("elio", W/2, fy+115);
+      ctx.font=font(body,18); ctx.fillStyle=f.sub; ctx.fillText(dateStr(), W/2, fy+190);
     }
-    sunflower(ctx, W-P-40, fy+110, 52);
-    leaf(ctx, P+40, fy+120, 30, -.5, leafCols[0]); leaf(ctx, P+90, fy+150, 20, 1.1, leafCols[2]);
+    sunflower(ctx, W-P-40, fy+110, 46);
+    if (!f.pattern){ leaf(ctx, P+40, fy+120, 30, -.5, L[0]); leaf(ctx, P+90, fy+150, 20, 1.1, L[2]); }
   }
   lastBlob = await new Promise(r => out.toBlob(r, "image/png"));
 }
